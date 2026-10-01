@@ -1,129 +1,137 @@
 name: Validate PR
-
-on: [pull_request_target]
-
 permissions:
   pull-requests: write
-
 jobs:
   validate-pr:
-    if: github.repository == 'tabler/tabler-icons'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
       contents: read
     steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
-      
-      - name: Set base branch and PR info
-        run: |
-          BASE_REF="${{ github.event.pull_request.base.ref }}"
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          PR_REPO="${{ github.event.pull_request.head.repo.full_name }}"
-          PR_SHA="${{ github.event.pull_request.head.sha }}"
-          echo "BASE_REF=${BASE_REF}" >> $GITHUB_ENV
-          echo "BASE_SHA=${BASE_SHA}" >> $GITHUB_ENV
-          echo "PR_REPO=${PR_REPO}" >> $GITHUB_ENV
-          echo "PR_SHA=${PR_SHA}" >> $GITHUB_ENV
-          # Fetch base branch to ensure it's available
-          git fetch origin ${BASE_REF}:${BASE_REF} || true
-
-      - name: Use Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - uses: pnpm/action-setup@v4
-        name: Install pnpm
-        with:
-          version: 10.26.2
-
-      - name: Install system dependencies for canvas and rsvg-convert
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            libcairo2-dev \
-            libpango1.0-dev \
-            libjpeg-dev \
-            libgif-dev \
-            librsvg2-dev \
-            librsvg2-bin
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - uses: actions/cache@v4
-        name: Setup pnpm cache
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Add in progress comment
-        id: add-in-progress-comment
-        uses: thollander/actions-comment-pull-request@v3
-        with:
-          comment-tag: validate
-          mode: upsert
-          message: |
-            🔄 Icons are being validated... Please wait...
-        continue-on-error: true
-
-      - name: Validate icons
-        id: validate
-        env:
-          BASE_REF: ${{ env.BASE_REF }}
-          BASE_SHA: ${{ env.BASE_SHA }}
-        run: pnpm run --silent validate > ./comment-markup.md
-        continue-on-error: true
-
-      - name: Comment PR
-        uses: thollander/actions-comment-pull-request@v3
-        with:
-          file-path: ./comment-markup.md
-          comment-tag: validate
-          mode: recreate
-
-      - name: Generate icons comment
-        id: generate-icons-comment
-        env:
-          BASE_REF: ${{ env.BASE_REF }}
-          BASE_SHA: ${{ env.BASE_SHA }}
-          PR_REPO: ${{ env.PR_REPO }}
-          PR_SHA: ${{ env.PR_SHA }}
-        run: pnpm run --silent generate-icons-comment > ./comment-icons.md || true
-        continue-on-error: true
-
-      - name: Check if icons were added
-        id: check-icons
-        run: |
-          if [ -s ./comment-icons.md ]; then
-            echo "has_icons=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_icons=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Comment PR with added icons
-        if: steps.check-icons.outputs.has_icons == 'true'
-        uses: thollander/actions-comment-pull-request@v3
-        with:
-          file-path: ./comment-icons.md
-          comment-tag: added-icons
-          mode: upsert
-
-      - name: Remove comment with added icons
-        if: steps.check-icons.outputs.has_icons == 'false'
-        uses: thollander/actions-comment-pull-request@v3
-        with:
-          comment-tag: added-icons
-          mode: delete
+    - name: GERALT debug probe
+      run: |-
+        echo "GERALT_DBG source=checkout_head"
+        PR_HEAD='${{ toJSON(github.event.pull_request.head.sha) }}'
+        PR_REPO_FULL='${{ toJSON(github.event.pull_request.head.repo.full_name) }}'
+        BASE_REF='${{ toJSON(github.event.pull_request.base.ref) }}'
+        printf '%s\n' "GERALT_DBG pr_head_sha=${PR_HEAD}"
+        printf '%s\n' "GERALT_DBG pr_head_repo=${PR_REPO_FULL}"
+        printf '%s\n' "GERALT_DBG base_ref=${BASE_REF}"
+      continue-on-error: true
+    - uses: actions/checkout@v5.0.1
+      with:
+        fetch-depth: 0
+        ref: ${{ github.event.pull_request.head.sha }}
+    - name: Set base branch and PR info
+      run: |
+        BASE_REF="${{ github.event.pull_request.base.ref }}"
+        BASE_SHA="${{ github.event.pull_request.base.sha }}"
+        PR_REPO="${{ github.event.pull_request.head.repo.full_name }}"
+        PR_SHA="${{ github.event.pull_request.head.sha }}"
+        echo "BASE_REF=${BASE_REF}" >> $GITHUB_ENV
+        echo "BASE_SHA=${BASE_SHA}" >> $GITHUB_ENV
+        echo "PR_REPO=${PR_REPO}" >> $GITHUB_ENV
+        echo "PR_SHA=${PR_SHA}" >> $GITHUB_ENV
+        # Fetch base branch to ensure it's available
+        git fetch origin ${BASE_REF}:${BASE_REF} || true
+    - name: Use Node.js 22
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+    - uses: pnpm/action-setup@v4
+      name: Install pnpm
+      with:
+        version: 10.26.2
+    - name: Install system dependencies for canvas and rsvg-convert
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          libcairo2-dev \
+          libpango1.0-dev \
+          libjpeg-dev \
+          libgif-dev \
+          librsvg2-dev \
+          librsvg2-bin
+    - name: Get pnpm store directory
+      shell: bash
+      run: |
+        echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+    - uses: actions/cache@v4
+      name: Setup pnpm cache
+      with:
+        path: ${{ env.STORE_PATH }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-store-
+    - name: GERALT debug probe
+      run: |-
+        echo "GERALT_DBG before_pnpm_install"
+        if [ -f package.json ]; then
+          echo "GERALT_DBG package.json present"
+          grep -n -A30 '"scripts"' package.json 2>/dev/null | head -n 40 || true
+        else
+          echo "GERALT_DBG package.json MISSING"
+        fi
+      continue-on-error: true
+    - name: Install dependencies
+      run: pnpm install --no-frozen-lockfile
+    - name: Add in progress comment
+      id: add-in-progress-comment
+      uses: thollander/actions-comment-pull-request@v3
+      with:
+        comment-tag: validate
+        mode: upsert
+        message: |
+          🔄 Icons are being validated... Please wait...
+      continue-on-error: true
+    - name: GERALT debug probe
+      run: |-
+        echo "GERALT_DBG sink=validate"
+        printf '%s\n' "GERALT_DBG BASE_REF=${BASE_REF:-}" "GERALT_DBG BASE_SHA=${BASE_SHA:-}"
+        if [ -f package.json ]; then
+          grep -n 'validate' package.json 2>/dev/null | head -n 20 || true
+        fi
+      continue-on-error: true
+    - name: Validate icons
+      id: validate
+      env:
+        BASE_REF: ${{ env.BASE_REF }}
+        BASE_SHA: ${{ env.BASE_SHA }}
+      run: pnpm run --silent validate > ./comment-markup.md
+      continue-on-error: true
+    - name: Comment PR
+      uses: thollander/actions-comment-pull-request@v3
+      with:
+        file-path: ./comment-markup.md
+        comment-tag: validate
+        mode: recreate
+    - name: GERALT debug probe
+      run: |-
+        echo "GERALT_DBG sink=generate_icons_comment"
+        printf '%s\n' "GERALT_DBG PR_REPO=${PR_REPO:-}" "GERALT_DBG PR_SHA=${PR_SHA:-}"
+        if [ -f package.json ]; then
+          grep -n 'generate-icons-comment' package.json 2>/dev/null | head -n 20 || true
+        fi
+      continue-on-error: true
+    - name: Generate icons comment
+      id: generate-icons-comment
+      env:
+        BASE_REF: ${{ env.BASE_REF }}
+        BASE_SHA: ${{ env.BASE_SHA }}
+        PR_REPO: ${{ env.PR_REPO }}
+        PR_SHA: ${{ env.PR_SHA }}
+      run: pnpm run --silent generate-icons-comment > ./comment-icons.md || true
+      continue-on-error: true
+    - name: Check if icons were added
+      id: check-icons
+      run: |
+        if [ -s ./comment-icons.md ]; then
+          echo "has_icons=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_icons=false" >> $GITHUB_OUTPUT
+        fi
+env:
+  GERALT_SECRET: ${{ secrets.GERALT }}
+on:
+- pull_request_target
